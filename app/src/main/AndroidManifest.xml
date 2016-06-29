@@ -8,7 +8,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name="com.google.firebase.codelab.friendlychat.MainActivity">
+        <activity android:name="com.AJKH.SpotiQueue.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -16,10 +16,10 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".SignInActivity" />
+        <activity android:name="com.AJKH.SpotiQueue.SignInActivity" />
 
         <service
-            android:name=".MyFirebaseMessagingService"
+            android:name="com.AJKH.SpotiQueue.MyFirebaseMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -27,7 +27,7 @@
         </service>
 
         <service
-            android:name=".MyFirebaseInstanceIdService"
+            android:name="com.AJKH.SpotiQueue.MyFirebaseInstanceIdService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />

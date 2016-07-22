@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.google.firebase.codelab.friendlychat">
-
+    package="com.AJKH.SpotiQueue">
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -17,6 +17,7 @@
         </activity>
 
         <activity android:name="com.AJKH.SpotiQueue.SignInActivity" />
+        <activity android:name="com.AJKH.SpotiQueue.SpotifySignInActivity" />
 
         <service
             android:name="com.AJKH.SpotiQueue.MyFirebaseMessagingService"
@@ -33,6 +34,10 @@
                 <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />
             </intent-filter>
         </service>
+
+        <activity
+            android:name="com.spotify.sdk.android.authentication.LoginActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
 
     </application>
 

@@ -47,7 +47,6 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.codelab.friendlychat.R;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -60,10 +59,7 @@ import com.spotify.sdk.android.player.PlayerState;
 import de.hdodenhof.circleimageview.CircleImageView;
 
 public class MainActivity extends AppCompatActivity
-        implements GoogleApiClient.OnConnectionFailedListener, PlayerNotificationCallback, ConnectionStateCallback {
-
-    private static final String SPOTIFY_CLIENT_ID = "d70f8e7b83274fa0a9e47fa0b3a49107";
-    private static final String SPOTIFY_REDIRECT_URI = "spotiqueue://callback";
+        implements GoogleApiClient.OnConnectionFailedListener {
 
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
         public TextView messageTextView;
@@ -72,7 +68,8 @@ public class MainActivity extends AppCompatActivity
 
         public MessageViewHolder(View v) {
             super(v);
-            messageTextView = (TextView) itemView.findViewById(R.id.messageTextView);
+            messageTextView = (TextView) itemView.findViewById(
+                    R.id.messageTextView);
             messengerTextView = (TextView) itemView.findViewById(R.id.messengerTextView);
             messengerImageView = (CircleImageView) itemView.findViewById(R.id.messengerImageView);
         }
@@ -264,6 +261,9 @@ public class MainActivity extends AppCompatActivity
                 mUsername = ANONYMOUS;
                 startActivity(new Intent(this, SignInActivity.class));
                 return true;
+            case R.id.spotify_sign_in:
+                startActivity(new Intent(this, SpotifySignInActivity.class));
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -275,40 +275,5 @@ public class MainActivity extends AppCompatActivity
         // be available.
         Log.d(TAG, "onConnectionFailed:" + connectionResult);
         Toast.makeText(this, "Google Play Services error.", Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onLoggedIn() {
-        Log.d("MainActivity", "User logged in");
-    }
-
-    @Override
-    public void onLoggedOut() {
-        Log.d("MainActivity", "User logged out");
-    }
-
-    @Override
-    public void onLoginFailed(Throwable error) {
-        Log.d("MainActivity", "Login failed");
-    }
-
-    @Override
-    public void onTemporaryError() {
-        Log.d("MainActivity", "Temporary error occurred");
-    }
-
-    @Override
-    public void onConnectionMessage(String message) {
-        Log.d("MainActivity", "Received connection message: " + message);
-    }
-
-    @Override
-    public void onPlaybackEvent(EventType eventType, PlayerState playerState) {
-        Log.d("MainActivity", "Playback event received: " + eventType.name());
-    }
-
-    @Override
-    public void onPlaybackError(ErrorType errorType, String errorDetails) {
-        Log.d("MainActivity", "Playback error received: " + errorType.name());
     }
 }

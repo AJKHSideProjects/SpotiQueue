@@ -12,7 +12,7 @@ android {
     buildToolsVersion "23.0.3"
 
     defaultConfig {
-        applicationId "com.google.firebase.codelab.friendlychat"
+        applicationId "com.AJKH.SpotiQueue"
         minSdkVersion 15
         targetSdkVersion 23
         versionCode 1

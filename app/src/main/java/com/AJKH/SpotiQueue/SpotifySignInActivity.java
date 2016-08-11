@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.sax.StartElementListener;
 import android.util.Log;
 import android.view.View;
 
@@ -49,22 +50,10 @@ public class SpotifySignInActivity extends Activity implements
         if (requestCode == REQUEST_CODE) {
             AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, intent);
             if (response.getType() == AuthenticationResponse.Type.TOKEN) {
-                Config playerConfig = new Config(this, response.getAccessToken(), SPOTIFY_CLIENT_ID);
-                Spotify.getPlayer(playerConfig, this, new Player.InitializationObserver() {
-                    @Override
-                    public void onInitialized(Player player) {
-                        mPlayer = player;
-                        mPlayer.addConnectionStateCallback(SpotifySignInActivity.this);
-                        mPlayer.addPlayerNotificationCallback(SpotifySignInActivity.this);
-                        mPlayer.play("spotify:track:2TpxZ7JUBn3uw46aR7qd6V");
-                        finish();
-                    }
+                Intent spotifySuccessLogin = new Intent(getApplicationContext(), MainActivity.class);
+                spotifySuccessLogin.putExtra("SPOTIFY_AUTH_TOKEN", response.getAccessToken());
 
-                    @Override
-                    public void onError(Throwable throwable) {
-                        Log.e("MainActivity", "Could not initialize player: " + throwable.getMessage());
-                    }
-                });
+                startActivity(spotifySuccessLogin);
             }
         }
     }

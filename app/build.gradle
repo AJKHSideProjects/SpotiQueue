@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId "com.AJKH.SpotiQueue"
-        minSdkVersion 15
+        minSdkVersion 19
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
@@ -43,6 +43,7 @@ dependencies {
 
     // Google
     compile 'com.google.android.gms:play-services-auth:9.0.0'
+    compile 'com.android.volley:volley:1.0.0'
 
     // Firebase
     compile 'com.google.firebase:firebase-database:9.0.0'

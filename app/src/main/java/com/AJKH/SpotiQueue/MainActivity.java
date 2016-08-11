@@ -1,12 +1,12 @@
 /**
  * Copyright Google Inc. All Rights Reserved.
- * <p/>
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * <p/>
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p/>
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
@@ -29,6 +30,7 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
+import android.util.JsonReader;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -40,6 +42,12 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.google.android.gms.auth.api.Auth;
@@ -55,6 +63,14 @@ import com.spotify.sdk.android.player.ConnectionStateCallback;
 import com.spotify.sdk.android.player.Player;
 import com.spotify.sdk.android.player.PlayerNotificationCallback;
 import com.spotify.sdk.android.player.PlayerState;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -85,6 +101,8 @@ public class MainActivity extends AppCompatActivity
     private String mPhotoUrl;
     private SharedPreferences mSharedPreferences;
     private GoogleApiClient mGoogleApiClient;
+    private String SPOTIFY_AUTH_TOKEN;
+    private String SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
 
     private Button mSendButton;
     private RecyclerView mMessageRecyclerView;
@@ -238,6 +256,98 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onResume() {
         super.onResume();
+        Bundle extras = getIntent().getExtras();
+        if (extras != null) {
+            SPOTIFY_AUTH_TOKEN = extras.getString("SPOTIFY_AUTH_TOKEN");
+            Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
+            toast.show();
+
+            searchSpotifyTrack();
+        }
+    }
+
+    protected void searchSpotifyTrack() {
+        String searchUrl = SPOTIFY_BASE_URL + "/search?q=To%20Be%20Alone%20With%20You&type=track";
+        RequestQueue queue = Volley.newRequestQueue(this);
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, searchUrl,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        // Display the first 500 characters of the response string.
+                        System.out.print(response);
+                        InputStream spotifyResponse = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
+                        try {
+                            List<String> ids = readSpotifyJsonResponse(spotifyResponse);
+                            System.out.print(ids);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+            }
+        });
+        queue.add(stringRequest);
+    }
+
+    public List<String> readSpotifyJsonResponse(InputStream in) throws IOException {
+        JsonReader reader = new JsonReader(new InputStreamReader(in, "UTF-8"));
+        try {
+            reader.beginObject();
+            while (reader.hasNext()){
+                String name = reader.nextName();
+                if (name.equals("tracks")){
+                    return readTracksObject(reader);
+                }
+            }
+            List<String> emptyList = new ArrayList<>();
+            return emptyList;
+        } finally {
+            reader.close();
+        }
+    }
+
+    public List<String> readTracksObject(JsonReader reader) throws IOException {
+        List<String> messages = new ArrayList<String>();
+
+        reader.beginObject();
+        while (reader.hasNext()) {
+            String nextName = reader.nextName();
+            if (nextName.equals("Items")){
+                  return readItemsArray(reader);
+            }
+        }
+        reader.endArray();
+        return new ArrayList<>();
+    }
+
+    public List<String> readItemsArray(JsonReader reader) throws IOException {
+        List<String> messages = new ArrayList<String>();
+
+        reader.beginArray();
+        while (reader.hasNext()) {
+            messages.add(readMessage(reader));
+        }
+        reader.endArray();
+        return messages;
+    }
+
+    public String readMessage(JsonReader reader) throws IOException {
+        String trackId = null;
+
+        reader.beginObject();
+
+        while (reader.hasNext()) {
+            String name = reader.nextName();
+            if (name.equals("id")) {
+                trackId = reader.nextString();
+            } else {
+                reader.skipValue();
+            }
+        }
+        reader.endObject();
+        return trackId;
     }
 
     @Override

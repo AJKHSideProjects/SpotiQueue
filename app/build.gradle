@@ -11,6 +11,10 @@ android {
     compileSdkVersion 23
     buildToolsVersion "23.0.3"
 
+    lintOptions {
+        abortOnError false
+    }
+
     defaultConfig {
         applicationId "com.AJKH.SpotiQueue"
         minSdkVersion 19

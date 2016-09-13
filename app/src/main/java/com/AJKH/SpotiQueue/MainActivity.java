@@ -1,26 +1,8 @@
-/**
- * Copyright Google Inc. All Rights Reserved.
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.AJKH.SpotiQueue;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Message;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.content.ContextCompat;
@@ -42,6 +24,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -58,19 +41,13 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import com.spotify.sdk.android.player.Spotify;
-import com.spotify.sdk.android.player.ConnectionStateCallback;
-import com.spotify.sdk.android.player.Player;
-import com.spotify.sdk.android.player.PlayerNotificationCallback;
-import com.spotify.sdk.android.player.PlayerState;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -93,16 +70,18 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "MainActivity";
     public static final String MESSAGES_CHILD = "messages";
-    private static final int REQUEST_INVITE = 1;
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 10;
     public static final String ANONYMOUS = "anonymous";
-    private static final String MESSAGE_SENT_EVENT = "message_sent";
     private String mUsername;
     private String mPhotoUrl;
     private SharedPreferences mSharedPreferences;
     private GoogleApiClient mGoogleApiClient;
+
+    //Spotify instance variables
     private String SPOTIFY_AUTH_TOKEN;
     private String SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
+    private String SPOTIFY_TRACK_ID;
+    private String SPOTIFY_USERNAME;
 
     private Button mSendButton;
     private RecyclerView mMessageRecyclerView;
@@ -115,17 +94,13 @@ public class MainActivity extends AppCompatActivity
     private FirebaseUser mFirebaseUser;
 
     private DatabaseReference mFirebaseDatabaseReference;
-    private FirebaseRecyclerAdapter<FriendlyMessage, MessageViewHolder>
-            mFirebaseAdapter;
-
-    private Player mPlayer;
+    private FirebaseRecyclerAdapter<FriendlyMessage, MessageViewHolder> mFirebaseAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        // Set default username is anonymous.
         mUsername = ANONYMOUS;
 
         // Initialize Firebase Auth
@@ -259,11 +234,45 @@ public class MainActivity extends AppCompatActivity
         Bundle extras = getIntent().getExtras();
         if (extras != null) {
             SPOTIFY_AUTH_TOKEN = extras.getString("SPOTIFY_AUTH_TOKEN");
+            SPOTIFY_USERNAME = extras.getString("SPOTIFY_USERNAME");
             Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
             toast.show();
 
             searchSpotifyTrack();
         }
+    }
+
+    private void addTrackToPlaylist() {
+        String searchUrl = "https://api.spotify.com/v1/users/" + SPOTIFY_USERNAME + "/playlists/2yGG16vGVBzJmyAmvhiR6Y/tracks?uris=spotify%3Atrack%3A" + SPOTIFY_TRACK_ID;
+        RequestQueue queue = Volley.newRequestQueue(this);
+        StringRequest postRequest = new StringRequest(Request.Method.POST, searchUrl,
+                new Response.Listener<String>()
+                {
+                    @Override
+                    public void onResponse(String response) {
+                        // response
+                        Log.d("Response", response);
+                    }
+                },
+                new Response.ErrorListener()
+                {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        // TODO Auto-generated method stub
+                        Log.d("ERROR","error => "+error.toString());
+                    }
+                }
+        ) {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String>  params = new HashMap<String, String>();
+                params.put("Authorization", "Bearer " + SPOTIFY_AUTH_TOKEN);
+                params.put("Accept", "application/jason");
+
+                return params;
+            }
+        };
+        queue.add(postRequest);
     }
 
     protected void searchSpotifyTrack() {
@@ -274,11 +283,9 @@ public class MainActivity extends AppCompatActivity
                     @Override
                     public void onResponse(String response) {
                         // Display the first 500 characters of the response string.
-                        System.out.print(response);
                         InputStream spotifyResponse = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
                         try {
-                            List<String> ids = readSpotifyJsonResponse(spotifyResponse);
-                            System.out.print(ids);
+                            readSpotifyJsonResponse(spotifyResponse);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -291,63 +298,57 @@ public class MainActivity extends AppCompatActivity
         queue.add(stringRequest);
     }
 
-    public List<String> readSpotifyJsonResponse(InputStream in) throws IOException {
+    public void readSpotifyJsonResponse(InputStream in) throws IOException {
         JsonReader reader = new JsonReader(new InputStreamReader(in, "UTF-8"));
         try {
             reader.beginObject();
             while (reader.hasNext()){
                 String name = reader.nextName();
                 if (name.equals("tracks")){
-                    return readTracksObject(reader);
+                    readTracksObject(reader);
+                    break;
                 }
             }
-            List<String> emptyList = new ArrayList<>();
-            return emptyList;
-        } finally {
-            reader.close();
+        }
+        catch (Exception e) {
+            System.out.println(e);
         }
     }
 
-    public List<String> readTracksObject(JsonReader reader) throws IOException {
-        List<String> messages = new ArrayList<String>();
-
+    public void readTracksObject(JsonReader reader) throws IOException {
         reader.beginObject();
+        reader.skipValue();
+        reader.skipValue();
+
         while (reader.hasNext()) {
             String nextName = reader.nextName();
-            if (nextName.equals("Items")){
-                  return readItemsArray(reader);
+            if (nextName.equals("items")){
+                  readItemsArray(reader);
+                   break;
             }
         }
-        reader.endArray();
-        return new ArrayList<>();
     }
 
-    public List<String> readItemsArray(JsonReader reader) throws IOException {
-        List<String> messages = new ArrayList<String>();
-
+    public void readItemsArray(JsonReader reader) throws IOException {
         reader.beginArray();
-        while (reader.hasNext()) {
-            messages.add(readMessage(reader));
-        }
-        reader.endArray();
-        return messages;
+        getSongId(reader);
     }
 
-    public String readMessage(JsonReader reader) throws IOException {
-        String trackId = null;
-
+    public void getSongId(JsonReader reader) throws IOException {
         reader.beginObject();
 
         while (reader.hasNext()) {
             String name = reader.nextName();
             if (name.equals("id")) {
-                trackId = reader.nextString();
+                SPOTIFY_TRACK_ID = reader.nextString();
+                addTrackToPlaylist();
+                break;
             } else {
                 reader.skipValue();
             }
         }
-        reader.endObject();
-        return trackId;
+
+        reader.close();
     }
 
     @Override

@@ -12,7 +12,6 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
-import android.util.JsonReader;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -24,13 +23,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
+import com.AJKH.SpotiQueue.Firebase.SignInActivity;
+import com.AJKH.SpotiQueue.Model.UserInput;
+import com.AJKH.SpotiQueue.Spotify.SpotifyHttpUtil;
+import com.AJKH.SpotiQueue.Spotify.SpotifySignInActivity;
 import com.bumptech.glide.Glide;
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
 import com.google.android.gms.auth.api.Auth;
@@ -41,18 +37,22 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-
 import de.hdodenhof.circleimageview.CircleImageView;
 
-public class MainActivity extends AppCompatActivity
-        implements GoogleApiClient.OnConnectionFailedListener {
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener {
+    private static final String TAG = "MainActivity";
+    public static final String MESSAGES_CHILD = "messages";
+    public static final String ANONYMOUS = "anonymous";
+    private String mUsername;
+    private String mPhotoUrl;
+    private SharedPreferences mSharedPreferences;
+    private GoogleApiClient mGoogleApiClient;
+
+    private Button mSendButton;
+    private RecyclerView mMessageRecyclerView;
+    private LinearLayoutManager mLinearLayoutManager;
+    private ProgressBar mProgressBar;
+    private EditText mMessageEditText;
 
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
         public TextView messageTextView;
@@ -61,40 +61,18 @@ public class MainActivity extends AppCompatActivity
 
         public MessageViewHolder(View v) {
             super(v);
-            messageTextView = (TextView) itemView.findViewById(
-                    R.id.messageTextView);
+            messageTextView = (TextView) itemView.findViewById(R.id.messageTextView);
             messengerTextView = (TextView) itemView.findViewById(R.id.messengerTextView);
             messengerImageView = (CircleImageView) itemView.findViewById(R.id.messengerImageView);
         }
     }
-
-    private static final String TAG = "MainActivity";
-    public static final String MESSAGES_CHILD = "messages";
-    public static final int DEFAULT_MSG_LENGTH_LIMIT = 10;
-    public static final String ANONYMOUS = "anonymous";
-    private String mUsername;
-    private String mPhotoUrl;
-    private SharedPreferences mSharedPreferences;
-    private GoogleApiClient mGoogleApiClient;
-
-    //Spotify instance variables
-    private String SPOTIFY_AUTH_TOKEN;
-    private String SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
-    private String SPOTIFY_TRACK_ID;
-    private String SPOTIFY_USERNAME;
-
-    private Button mSendButton;
-    private RecyclerView mMessageRecyclerView;
-    private LinearLayoutManager mLinearLayoutManager;
-    private ProgressBar mProgressBar;
-    private EditText mMessageEditText;
 
     // Firebase instance variables
     private FirebaseAuth mFirebaseAuth;
     private FirebaseUser mFirebaseUser;
 
     private DatabaseReference mFirebaseDatabaseReference;
-    private FirebaseRecyclerAdapter<FriendlyMessage, MessageViewHolder> mFirebaseAdapter;
+    private FirebaseRecyclerAdapter<UserInput, MessageViewHolder> mFirebaseAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,27 +110,26 @@ public class MainActivity extends AppCompatActivity
 
         // New child entries
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
-        mFirebaseAdapter = new FirebaseRecyclerAdapter<FriendlyMessage,
+        mFirebaseAdapter = new FirebaseRecyclerAdapter<UserInput,
                 MessageViewHolder>(
-                FriendlyMessage.class,
+                UserInput.class,
                 R.layout.item_message,
                 MessageViewHolder.class,
                 mFirebaseDatabaseReference.child(MESSAGES_CHILD)) {
 
             @Override
-            protected void populateViewHolder(MessageViewHolder viewHolder,
-                                              FriendlyMessage friendlyMessage, int position) {
+            protected void populateViewHolder(MessageViewHolder viewHolder, UserInput userInput, int position) {
                 mProgressBar.setVisibility(ProgressBar.INVISIBLE);
-                viewHolder.messageTextView.setText(friendlyMessage.getText());
-                viewHolder.messengerTextView.setText(friendlyMessage.getName());
-                if (friendlyMessage.getPhotoUrl() == null) {
+                viewHolder.messageTextView.setText(userInput.getText());
+                viewHolder.messengerTextView.setText(userInput.getName());
+                if (userInput.getPhotoUrl() == null) {
                     viewHolder.messengerImageView
                             .setImageDrawable(ContextCompat
                                     .getDrawable(MainActivity.this,
                                             R.drawable.ic_account_circle_black_36dp));
                 } else {
                     Glide.with(MainActivity.this)
-                            .load(friendlyMessage.getPhotoUrl())
+                            .load(userInput.getPhotoUrl())
                             .into(viewHolder.messengerImageView);
                 }
             }
@@ -180,8 +157,7 @@ public class MainActivity extends AppCompatActivity
         mMessageRecyclerView.setAdapter(mFirebaseAdapter);
 
         mMessageEditText = (EditText) findViewById(R.id.messageEditText);
-        mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(mSharedPreferences
-                .getInt(CodelabPreferences.FRIENDLY_MSG_LENGTH, DEFAULT_MSG_LENGTH_LIMIT))});
+        mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(400)});
         mMessageEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -205,12 +181,12 @@ public class MainActivity extends AppCompatActivity
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                FriendlyMessage friendlyMessage = new
-                        FriendlyMessage(mMessageEditText.getText().toString(),
+                UserInput userInput = new
+                        UserInput(mMessageEditText.getText().toString(),
                         mUsername,
                         mPhotoUrl);
                 mFirebaseDatabaseReference.child(MESSAGES_CHILD)
-                        .push().setValue(friendlyMessage);
+                        .push().setValue(userInput);
                 mMessageEditText.setText("");
             }
         });
@@ -232,123 +208,16 @@ public class MainActivity extends AppCompatActivity
     public void onResume() {
         super.onResume();
         Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            SPOTIFY_AUTH_TOKEN = extras.getString("SPOTIFY_AUTH_TOKEN");
-            SPOTIFY_USERNAME = extras.getString("SPOTIFY_USERNAME");
+        if (extras != null && mSharedPreferences.getString(Preferences.SPOTIFY_AUTH_TOKEN, null) == null) {
+            SharedPreferences.Editor editor = getSharedPreferences(Preferences.PROPERTIES, MODE_PRIVATE).edit();
+            editor.putString(Preferences.SPOTIFY_AUTH_TOKEN, extras.getString("SPOTIFY_AUTH_TOKEN"));
+            editor.putString(Preferences.SPOTIFY_USERNAME, extras.getString("SPOTIFY_USERNAME"));
+            editor.commit();
             Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
             toast.show();
 
-            searchSpotifyTrack();
+            new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack();
         }
-    }
-
-    private void addTrackToPlaylist() {
-        String searchUrl = "https://api.spotify.com/v1/users/" + SPOTIFY_USERNAME + "/playlists/2yGG16vGVBzJmyAmvhiR6Y/tracks?uris=spotify%3Atrack%3A" + SPOTIFY_TRACK_ID;
-        RequestQueue queue = Volley.newRequestQueue(this);
-        StringRequest postRequest = new StringRequest(Request.Method.POST, searchUrl,
-                new Response.Listener<String>()
-                {
-                    @Override
-                    public void onResponse(String response) {
-                        // response
-                        Log.d("Response", response);
-                    }
-                },
-                new Response.ErrorListener()
-                {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        // TODO Auto-generated method stub
-                        Log.d("ERROR","error => "+error.toString());
-                    }
-                }
-        ) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String>  params = new HashMap<String, String>();
-                params.put("Authorization", "Bearer " + SPOTIFY_AUTH_TOKEN);
-                params.put("Accept", "application/jason");
-
-                return params;
-            }
-        };
-        queue.add(postRequest);
-    }
-
-    protected void searchSpotifyTrack() {
-        String searchUrl = SPOTIFY_BASE_URL + "/search?q=To%20Be%20Alone%20With%20You&type=track";
-        RequestQueue queue = Volley.newRequestQueue(this);
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, searchUrl,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        // Display the first 500 characters of the response string.
-                        InputStream spotifyResponse = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
-                        try {
-                            readSpotifyJsonResponse(spotifyResponse);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-            }
-        });
-        queue.add(stringRequest);
-    }
-
-    public void readSpotifyJsonResponse(InputStream in) throws IOException {
-        JsonReader reader = new JsonReader(new InputStreamReader(in, "UTF-8"));
-        try {
-            reader.beginObject();
-            while (reader.hasNext()){
-                String name = reader.nextName();
-                if (name.equals("tracks")){
-                    readTracksObject(reader);
-                    break;
-                }
-            }
-        }
-        catch (Exception e) {
-            System.out.println(e);
-        }
-    }
-
-    public void readTracksObject(JsonReader reader) throws IOException {
-        reader.beginObject();
-        reader.skipValue();
-        reader.skipValue();
-
-        while (reader.hasNext()) {
-            String nextName = reader.nextName();
-            if (nextName.equals("items")){
-                  readItemsArray(reader);
-                   break;
-            }
-        }
-    }
-
-    public void readItemsArray(JsonReader reader) throws IOException {
-        reader.beginArray();
-        getSongId(reader);
-    }
-
-    public void getSongId(JsonReader reader) throws IOException {
-        reader.beginObject();
-
-        while (reader.hasNext()) {
-            String name = reader.nextName();
-            if (name.equals("id")) {
-                SPOTIFY_TRACK_ID = reader.nextString();
-                addTrackToPlaylist();
-                break;
-            } else {
-                reader.skipValue();
-            }
-        }
-
-        reader.close();
     }
 
     @Override

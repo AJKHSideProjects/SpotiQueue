@@ -16,11 +16,11 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="com.AJKH.SpotiQueue.SignInActivity" />
-        <activity android:name="com.AJKH.SpotiQueue.SpotifySignInActivity" />
+        <activity android:name=".Firebase.SignInActivity" />
+        <activity android:name=".Spotify.SpotifySignInActivity" />
 
         <service
-            android:name="com.AJKH.SpotiQueue.MyFirebaseMessagingService"
+            android:name=".Firebase.MyFirebaseMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -28,7 +28,7 @@
         </service>
 
         <service
-            android:name="com.AJKH.SpotiQueue.MyFirebaseInstanceIdService"
+            android:name=".Firebase.MyFirebaseInstanceIdService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />

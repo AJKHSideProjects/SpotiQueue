@@ -15,28 +15,34 @@
  */
 package com.AJKH.SpotiQueue;
 
-public class FriendlyMessage {
+public class SearchMessage {
 
-    private String text;
+    private String songText;
+    private String artistText;
     private String name;
     private String photoUrl;
 
-    public FriendlyMessage() {
+    public SearchMessage() {
     }
 
-    public FriendlyMessage(String text, String name, String photoUrl) {
-        this.text = text;
+    public SearchMessage(String songText, String artistText, String name, String photoUrl) {
+        this.songText = songText;
+        this.artistText = artistText;
         this.name = name;
         this.photoUrl = photoUrl;
     }
 
-    public String getText() {
-        return text;
+    public String getSongText() {
+        return songText;
     }
 
-    public void setText(String text) {
-        this.text = text;
+    public void setSongText(String text) {
+        this.songText = text;
     }
+
+    public String getArtistText() { return artistText;}
+
+    public void setArtistText(String text) { this.artistText = text;}
 
     public String getName() {
         return name;

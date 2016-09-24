@@ -55,13 +55,14 @@ public class MainActivity extends AppCompatActivity
         implements GoogleApiClient.OnConnectionFailedListener {
 
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
-        public TextView messageTextView;
+        public TextView trackTextView;
+        public TextView artistTextView;
         public TextView messengerTextView;
         public CircleImageView messengerImageView;
 
         public MessageViewHolder(View v) {
             super(v);
-            messageTextView = (TextView) itemView.findViewById(
+            trackTextView = (TextView) itemView.findViewById(
                     R.id.messageTextView);
             messengerTextView = (TextView) itemView.findViewById(R.id.messengerTextView);
             messengerImageView = (CircleImageView) itemView.findViewById(R.id.messengerImageView);
@@ -70,7 +71,7 @@ public class MainActivity extends AppCompatActivity
 
     private static final String TAG = "MainActivity";
     public static final String MESSAGES_CHILD = "messages";
-    public static final int DEFAULT_MSG_LENGTH_LIMIT = 10;
+    public static final int DEFAULT_MSG_LENGTH_LIMIT = 25;
     public static final String ANONYMOUS = "anonymous";
     private String mUsername;
     private String mPhotoUrl;
@@ -87,14 +88,14 @@ public class MainActivity extends AppCompatActivity
     private RecyclerView mMessageRecyclerView;
     private LinearLayoutManager mLinearLayoutManager;
     private ProgressBar mProgressBar;
-    private EditText mMessageEditText;
-
+    private EditText mTrackText;
+    private EditText mArtistText;
     // Firebase instance variables
     private FirebaseAuth mFirebaseAuth;
     private FirebaseUser mFirebaseUser;
 
     private DatabaseReference mFirebaseDatabaseReference;
-    private FirebaseRecyclerAdapter<FriendlyMessage, MessageViewHolder> mFirebaseAdapter;
+    private FirebaseRecyclerAdapter<SearchMessage, MessageViewHolder> mFirebaseAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,27 +133,27 @@ public class MainActivity extends AppCompatActivity
 
         // New child entries
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
-        mFirebaseAdapter = new FirebaseRecyclerAdapter<FriendlyMessage,
+        mFirebaseAdapter = new FirebaseRecyclerAdapter<SearchMessage,
                 MessageViewHolder>(
-                FriendlyMessage.class,
+                SearchMessage.class,
                 R.layout.item_message,
                 MessageViewHolder.class,
                 mFirebaseDatabaseReference.child(MESSAGES_CHILD)) {
 
             @Override
             protected void populateViewHolder(MessageViewHolder viewHolder,
-                                              FriendlyMessage friendlyMessage, int position) {
+                                              SearchMessage SearchMessage, int position) {
                 mProgressBar.setVisibility(ProgressBar.INVISIBLE);
-                viewHolder.messageTextView.setText(friendlyMessage.getText());
-                viewHolder.messengerTextView.setText(friendlyMessage.getName());
-                if (friendlyMessage.getPhotoUrl() == null) {
+                viewHolder.trackTextView.setText(SearchMessage.getSongText());
+                viewHolder.messengerTextView.setText(SearchMessage.getName());
+                if (SearchMessage.getPhotoUrl() == null) {
                     viewHolder.messengerImageView
                             .setImageDrawable(ContextCompat
                                     .getDrawable(MainActivity.this,
                                             R.drawable.ic_account_circle_black_36dp));
                 } else {
                     Glide.with(MainActivity.this)
-                            .load(friendlyMessage.getPhotoUrl())
+                            .load(SearchMessage.getPhotoUrl())
                             .into(viewHolder.messengerImageView);
                 }
             }
@@ -179,10 +180,11 @@ public class MainActivity extends AppCompatActivity
         mMessageRecyclerView.setLayoutManager(mLinearLayoutManager);
         mMessageRecyclerView.setAdapter(mFirebaseAdapter);
 
-        mMessageEditText = (EditText) findViewById(R.id.messageEditText);
-        mMessageEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(mSharedPreferences
+        mTrackText = (EditText) findViewById(R.id.trackText);
+        mArtistText = (EditText) findViewById(R.id.artistText);
+        mTrackText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(mSharedPreferences
                 .getInt(CodelabPreferences.FRIENDLY_MSG_LENGTH, DEFAULT_MSG_LENGTH_LIMIT))});
-        mMessageEditText.addTextChangedListener(new TextWatcher() {
+        mTrackText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
@@ -205,13 +207,17 @@ public class MainActivity extends AppCompatActivity
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                FriendlyMessage friendlyMessage = new
-                        FriendlyMessage(mMessageEditText.getText().toString(),
+                SearchMessage searchMessage = new
+                        SearchMessage(mTrackText.getText().toString(),
+                        mArtistText.getText().toString(),
                         mUsername,
                         mPhotoUrl);
                 mFirebaseDatabaseReference.child(MESSAGES_CHILD)
-                        .push().setValue(friendlyMessage);
-                mMessageEditText.setText("");
+                        .push().setValue(searchMessage);
+
+                searchSpotifyTrack(mTrackText.getText().toString());
+
+                mTrackText.setText("");
             }
         });
     }
@@ -237,13 +243,11 @@ public class MainActivity extends AppCompatActivity
             SPOTIFY_USERNAME = extras.getString("SPOTIFY_USERNAME");
             Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
             toast.show();
-
-            searchSpotifyTrack();
         }
     }
 
     private void addTrackToPlaylist() {
-        String searchUrl = "https://api.spotify.com/v1/users/" + SPOTIFY_USERNAME + "/playlists/2yGG16vGVBzJmyAmvhiR6Y/tracks?uris=spotify%3Atrack%3A" + SPOTIFY_TRACK_ID;
+        String searchUrl = "https://api.spotify.com/v1/users/" + SPOTIFY_USERNAME + "/playlists/3L0QAbswqp5024yuaxchnC/tracks?uris=spotify%3Atrack%3A" + SPOTIFY_TRACK_ID;
         RequestQueue queue = Volley.newRequestQueue(this);
         StringRequest postRequest = new StringRequest(Request.Method.POST, searchUrl,
                 new Response.Listener<String>()
@@ -275,8 +279,9 @@ public class MainActivity extends AppCompatActivity
         queue.add(postRequest);
     }
 
-    protected void searchSpotifyTrack() {
-        String searchUrl = SPOTIFY_BASE_URL + "/search?q=To%20Be%20Alone%20With%20You&type=track";
+    protected void searchSpotifyTrack(String songString) {
+        songString = songString.replaceAll("\\s","%20");
+        String searchUrl = SPOTIFY_BASE_URL + "/search?q=" + songString + "&type=track";
         RequestQueue queue = Volley.newRequestQueue(this);
         StringRequest stringRequest = new StringRequest(Request.Method.GET, searchUrl,
                 new Response.Listener<String>() {

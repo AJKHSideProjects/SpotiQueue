@@ -183,8 +183,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-
                 SearchMessage searchMessage = new
                         com.AJKH.SpotiQueue.SearchMessage(mTrackText.getText().toString(),
                         mArtistText.getText().toString(),
@@ -192,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         mPhotoUrl);
                 mFirebaseDatabaseReference.child(MESSAGES_CHILD)
                         .push().setValue(searchMessage);
+
 
                 if (mArtistText.getText().toString().equals("")) {
                     new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
@@ -228,6 +227,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             editor.commit();
             Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
             toast.show();
+
+            new SpotifyHttpUtil(getApplicationContext()).createSpotifyPlaylist();
         }
     }
 
@@ -262,8 +263,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
     @Override
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        // An unresolvable error has occurred and Google APIs (including Sign-In) will not
-        // be available.
         Log.d(TAG, "onConnectionFailed:" + connectionResult);
         Toast.makeText(this, "Google Play Services error.", Toast.LENGTH_SHORT).show();
     }

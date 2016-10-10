@@ -183,8 +183,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-
                 SearchMessage searchMessage = new
                         com.AJKH.SpotiQueue.SearchMessage(mTrackText.getText().toString(),
                         mArtistText.getText().toString(),

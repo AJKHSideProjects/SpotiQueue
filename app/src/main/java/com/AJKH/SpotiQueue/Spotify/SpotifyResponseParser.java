@@ -7,7 +7,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 public class SpotifyResponseParser {
-    public String readSpotifyJsonResponse(InputStream in) throws IOException {
+    public JsonReader getFirstTrackObjectFromTrackSearchJsonResponse(InputStream in) throws IOException {
         JsonReader reader = new JsonReader(new InputStreamReader(in, "UTF-8"));
         try {
             reader.beginObject();
@@ -24,7 +24,7 @@ public class SpotifyResponseParser {
         return null;
     }
 
-    public String readTracksObject(JsonReader reader) throws IOException {
+    public JsonReader readTracksObject(JsonReader reader) throws IOException {
         reader.beginObject();
         reader.skipValue();
         reader.skipValue();
@@ -39,24 +39,40 @@ public class SpotifyResponseParser {
         return null;
     }
 
-    public String readItemsArray(JsonReader reader) throws IOException {
+    public JsonReader readItemsArray(JsonReader reader) throws IOException {
         reader.beginArray();
-        return getSongId(reader);
+        return reader;
     }
 
-    public String getSongId(JsonReader reader) throws IOException {
-        reader.beginObject();
+    public String getTrackId(JsonReader trackObject) throws IOException {
+        trackObject.beginObject();
 
-        while (reader.hasNext()) {
-            String name = reader.nextName();
+        while (trackObject.hasNext()) {
+            String name = trackObject.nextName();
             if (name.equals("id")) {
-                return reader.nextString();
+                return trackObject.nextString();
             } else {
-                reader.skipValue();
+                trackObject.skipValue();
             }
         }
 
-        reader.close();
+        trackObject.close();
+        return null;
+    }
+
+    public String getTrackName(JsonReader trackObject) throws  IOException {
+        trackObject.beginObject();
+
+        while (trackObject.hasNext()) {
+            String name = trackObject.nextName();
+            if(name.equals("name")) {
+                return trackObject.nextString();
+            } else {
+                trackObject.skipValue();
+            }
+        }
+
+        trackObject.close();
         return null;
     }
 }

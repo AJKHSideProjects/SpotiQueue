@@ -3,7 +3,9 @@ package com.AJKH.SpotiQueue.Spotify;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
+import android.util.JsonReader;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.AJKH.SpotiQueue.Preferences;
 import com.android.volley.AuthFailureError;
@@ -11,8 +13,13 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -31,7 +38,7 @@ public class SpotifyHttpUtil {
         this.preferences = PreferenceManager.getDefaultSharedPreferences(appContext);
     }
 
-    public void addTrackToPlaylist(String trackId) {
+    public void addTrackToPlaylist(String trackId, final String trackName) {
         final String spotifyAuthToken = getAuthToken();
         String spotifyUsername = getUsername();
         String searchUrl = spotifyBaseUrl + "/users/" + spotifyUsername + "/playlists/3L0QAbswqp5024yuaxchnC/tracks?uris=spotify%3Atrack%3A" + trackId;
@@ -42,12 +49,18 @@ public class SpotifyHttpUtil {
                     @Override
                     public void onResponse(String response) {
                         Log.d("Response", response);
+
+                        Toast toast = Toast.makeText(appContext, trackName + " successfully added", Toast.LENGTH_LONG);
+                        toast.show();
                     }
                 },
                 new Response.ErrorListener() {
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         Log.d("ERROR", "error => " + error.toString());
+
+                        Toast toast = Toast.makeText(appContext, "Error while adding " + trackName, Toast.LENGTH_LONG);
+                        toast.show();
                     }
                 }
         ) {
@@ -67,17 +80,21 @@ public class SpotifyHttpUtil {
         songString = songString.replaceAll("\\s","%20");
         String searchUrl = spotifyBaseUrl + "/search?q=" + "track:" + songString + "&type=track";
         RequestQueue queue = Volley.newRequestQueue(appContext);
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, searchUrl,
-                new Response.Listener<String>() {
+        JsonObjectRequest stringRequest = new JsonObjectRequest(searchUrl, null,
+                new Response.Listener<JSONObject>() {
                     @Override
-                    public void onResponse(String response) {
-                        InputStream spotifyResponse = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
+                    public void onResponse(JSONObject response) {
                         try {
-                            String trackId = new SpotifyResponseParser().readSpotifyJsonResponse(spotifyResponse);
+                            JSONObject tracksObject = response.getJSONObject("tracks");
+                            JSONArray itemsArray = tracksObject.getJSONArray("items");
+                            JSONObject arrayItem1 = itemsArray.getJSONObject(0);
+                            String trackId = arrayItem1.getString("id");
+                            String trackName = arrayItem1.getString("name");
+
                             if (trackId != null) {
-                                addTrackToPlaylist(trackId);
+                                addTrackToPlaylist(trackId, trackName);
                             }
-                        } catch (IOException e) {
+                        } catch (JSONException e) {
                             e.printStackTrace();
                         }
                     }
@@ -94,17 +111,21 @@ public class SpotifyHttpUtil {
         artistString = artistString.replaceAll("\\s","%20");
         String searchUrl = spotifyBaseUrl + "/search?q=" + "artist:" + artistString + "%20track:" + songString + "&type=track";
         RequestQueue queue = Volley.newRequestQueue(appContext);
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, searchUrl,
-                new Response.Listener<String>() {
+        JsonObjectRequest stringRequest = new JsonObjectRequest(searchUrl, null,
+                new Response.Listener<JSONObject>() {
                     @Override
-                    public void onResponse(String response) {
-                        InputStream spotifyResponse = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
+                    public void onResponse(JSONObject response) {
                         try {
-                            String trackId = new SpotifyResponseParser().readSpotifyJsonResponse(spotifyResponse);
+                            JSONObject tracksObject = response.getJSONObject("tracks");
+                            JSONArray itemsArray = tracksObject.getJSONArray("items");
+                            JSONObject arrayItem1 = itemsArray.getJSONObject(0);
+                            String trackId = arrayItem1.getString("id");
+                            String trackName = arrayItem1.getString("name");
+
                             if (trackId != null) {
-                                addTrackToPlaylist(trackId);
+                                addTrackToPlaylist(trackId, trackName);
                             }
-                        } catch (IOException e) {
+                        } catch (JSONException e) {
                             e.printStackTrace();
                         }
                     }

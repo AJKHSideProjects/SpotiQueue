@@ -53,17 +53,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private ProgressBar mProgressBar;
     private EditText mTrackText;
     private EditText mArtistText;
-    private EditText mMessageEditText;
 
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
-        public TextView trackTextView;
-        public TextView artistTextView;
+        public TextView messageTextView;
         public TextView messengerTextView;
         public CircleImageView messengerImageView;
 
         public MessageViewHolder(View v) {
             super(v);
-            trackTextView = (TextView) itemView.findViewById(R.id.messageTextView);
+            messageTextView = (TextView) itemView.findViewById(R.id.messageTextView);
             messengerTextView = (TextView) itemView.findViewById(R.id.messengerTextView);
             messengerImageView = (CircleImageView) itemView.findViewById(R.id.messengerImageView);
         }
@@ -123,7 +121,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             protected void populateViewHolder(MessageViewHolder viewHolder,
                                               com.AJKH.SpotiQueue.SearchMessage SearchMessage, int position) {
                 mProgressBar.setVisibility(ProgressBar.INVISIBLE);
-                viewHolder.trackTextView.setText(SearchMessage.getSongText());
+                viewHolder.messageTextView.setText(SearchMessage.getArtistText() + " - " + SearchMessage.getSongText());
                 viewHolder.messengerTextView.setText(SearchMessage.getName());
                 if (SearchMessage.getPhotoUrl() == null) {
                     viewHolder.messengerImageView
@@ -185,6 +183,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+
+
                 SearchMessage searchMessage = new
                         com.AJKH.SpotiQueue.SearchMessage(mTrackText.getText().toString(),
                         mArtistText.getText().toString(),
@@ -193,8 +193,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 mFirebaseDatabaseReference.child(MESSAGES_CHILD)
                         .push().setValue(searchMessage);
 
-                new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
+                if (mArtistText.getText().toString().equals("")) {
+                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
+                } else {
+                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString(), mArtistText.getText().toString());
+                }
+
                 mTrackText.setText("");
+                mArtistText.setText("");
             }
         });
     }

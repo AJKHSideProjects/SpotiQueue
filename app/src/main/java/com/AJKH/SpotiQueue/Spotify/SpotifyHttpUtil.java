@@ -34,7 +34,7 @@ public class SpotifyHttpUtil {
     public void addTrackToPlaylist(String trackId) {
         final String spotifyAuthToken = getAuthToken();
         String spotifyUsername = getUsername();
-        String searchUrl = spotifyBaseUrl + "/users/" + spotifyUsername + "/playlists/2asgNtGT07kcaAiiYDjStf/tracks?uris=spotify%3Atrack%3A" + trackId;
+        String searchUrl = spotifyBaseUrl + "/users/" + spotifyUsername + "/playlists/3L0QAbswqp5024yuaxchnC/tracks?uris=spotify%3Atrack%3A" + trackId;
         RequestQueue queue = Volley.newRequestQueue(appContext);
 
         StringRequest postRequest = new StringRequest(Request.Method.POST, searchUrl,
@@ -65,7 +65,34 @@ public class SpotifyHttpUtil {
 
     public void searchSpotifyTrack(String songString) {
         songString = songString.replaceAll("\\s","%20");
-        String searchUrl = spotifyBaseUrl + "/search?q=" + songString + "&type=track";
+        String searchUrl = spotifyBaseUrl + "/search?q=" + "track:" + songString + "&type=track";
+        RequestQueue queue = Volley.newRequestQueue(appContext);
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, searchUrl,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+                        InputStream spotifyResponse = new ByteArrayInputStream(response.getBytes(StandardCharsets.UTF_8));
+                        try {
+                            String trackId = new SpotifyResponseParser().readSpotifyJsonResponse(spotifyResponse);
+                            if (trackId != null) {
+                                addTrackToPlaylist(trackId);
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+            }
+        });
+        queue.add(stringRequest);
+    }
+
+    public void searchSpotifyTrack(String songString, String artistString) {
+        songString = songString.replaceAll("\\s","%20");
+        artistString = artistString.replaceAll("\\s","%20");
+        String searchUrl = spotifyBaseUrl + "/search?q=" + "artist:" + artistString + "%20track:" + songString + "&type=track";
         RequestQueue queue = Volley.newRequestQueue(appContext);
         StringRequest stringRequest = new StringRequest(Request.Method.GET, searchUrl,
                 new Response.Listener<String>() {

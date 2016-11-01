@@ -24,6 +24,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.AJKH.SpotiQueue.Firebase.SignInActivity;
+import com.AJKH.SpotiQueue.Model.ActiveSession;
+import com.AJKH.SpotiQueue.Model.Track;
 import com.AJKH.SpotiQueue.Spotify.SpotifyHttpUtil;
 import com.AJKH.SpotiQueue.Spotify.SpotifySignInActivity;
 import com.bumptech.glide.Glide;
@@ -33,8 +35,17 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -53,6 +64,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     private ProgressBar mProgressBar;
     private EditText mTrackText;
     private EditText mArtistText;
+    private Collection<String> activeSessions = new ArrayList<>();
+    private String activeUserSession;
 
     public static class MessageViewHolder extends RecyclerView.ViewHolder {
         public TextView messageTextView;
@@ -108,20 +121,74 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         mLinearLayoutManager.setStackFromEnd(true);
         mMessageRecyclerView.setLayoutManager(mLinearLayoutManager);
 
+
         // New child entries
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
-        mFirebaseAdapter = new FirebaseRecyclerAdapter<com.AJKH.SpotiQueue.SearchMessage,
+        createNewSession("my new session");
+        setupAdaptor("my session");
+
+        mTrackText = (EditText) findViewById(R.id.trackText);
+        mArtistText = (EditText) findViewById(R.id.artistText);
+        mTrackText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(200)});
+        mTrackText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if (charSequence.toString().trim().length() > 0) {
+                    mSendButton.setEnabled(true);
+                } else {
+                    mSendButton.setEnabled(false);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+            }
+        });
+
+        mSendButton = (Button) findViewById(R.id.sendButton);
+        mSendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                SearchMessage searchMessage = new
+                        com.AJKH.SpotiQueue.SearchMessage(mTrackText.getText().toString(),
+                        mArtistText.getText().toString(),
+                        mUsername,
+                        mPhotoUrl);
+
+
+                mFirebaseDatabaseReference.child(MESSAGES_CHILD).push().setValue(searchMessage);
+
+                if (mArtistText.getText().toString().equals("")) {
+                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
+                } else {
+                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString(), mArtistText.getText().toString());
+                }
+
+                mTrackText.setText("");
+                mArtistText.setText("");
+            }
+        });
+
+        loadActiveSessions();
+    }
+
+    private void setupAdaptor(String sessionId) {
+        mFirebaseAdapter = new FirebaseRecyclerAdapter<SearchMessage,
                 MessageViewHolder>(
-                com.AJKH.SpotiQueue.SearchMessage.class,
+                SearchMessage.class,
                 R.layout.item_message,
                 MessageViewHolder.class,
-                mFirebaseDatabaseReference.child(MESSAGES_CHILD)) {
+                mFirebaseDatabaseReference.child("sessions").child(sessionId).child("songRequests")) {
 
             @Override
             protected void populateViewHolder(MessageViewHolder viewHolder,
-                                              com.AJKH.SpotiQueue.SearchMessage SearchMessage, int position) {
+                                              SearchMessage SearchMessage, int position) {
                 mProgressBar.setVisibility(ProgressBar.INVISIBLE);
-                viewHolder.messageTextView.setText(SearchMessage.getArtistText() + " - " + SearchMessage.getSongText());
+                viewHolder.messageTextView.setText(SearchMessage.getArtist() + " - " + SearchMessage.getTrack());
                 viewHolder.messengerTextView.setText(SearchMessage.getName());
                 if (SearchMessage.getPhotoUrl() == null) {
                     viewHolder.messengerImageView
@@ -156,52 +223,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         mMessageRecyclerView.setLayoutManager(mLinearLayoutManager);
         mMessageRecyclerView.setAdapter(mFirebaseAdapter);
+    }
 
-        mTrackText = (EditText) findViewById(R.id.trackText);
-        mArtistText = (EditText) findViewById(R.id.artistText);
-        mTrackText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(200)});
-        mTrackText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
+    public void createNewSession(String sessionName) {
+        activeUserSession = sessionName;
+        ActiveSession newSession = new ActiveSession(sessionName);
 
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                if (charSequence.toString().trim().length() > 0) {
-                    mSendButton.setEnabled(true);
-                } else {
-                    mSendButton.setEnabled(false);
-                }
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-            }
-        });
-
-        mSendButton = (Button) findViewById(R.id.sendButton);
-        mSendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                SearchMessage searchMessage = new
-                        com.AJKH.SpotiQueue.SearchMessage(mTrackText.getText().toString(),
-                        mArtistText.getText().toString(),
-                        mUsername,
-                        mPhotoUrl);
-                mFirebaseDatabaseReference.child(MESSAGES_CHILD)
-                        .push().setValue(searchMessage);
-
-
-                if (mArtistText.getText().toString().equals("")) {
-                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
-                } else {
-                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString(), mArtistText.getText().toString());
-                }
-
-                mTrackText.setText("");
-                mArtistText.setText("");
-            }
-        });
+        mFirebaseDatabaseReference.child("activeSessions").setValue(newSession);
     }
 
     @Override
@@ -230,6 +258,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
             new SpotifyHttpUtil(getApplicationContext()).createSpotifyPlaylist();
         }
+    }
+
+    public void loadActiveSessions() {
+        mFirebaseDatabaseReference.child("activeSessions").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                Map<String, String> td = (HashMap<String,String>) snapshot.getValue();
+                activeSessions = td.values();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     @Override

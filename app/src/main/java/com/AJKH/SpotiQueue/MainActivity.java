@@ -83,7 +83,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     // Firebase instance variables
     private FirebaseAuth mFirebaseAuth;
     private FirebaseUser mFirebaseUser;
-
     private DatabaseReference mFirebaseDatabaseReference;
     private FirebaseRecyclerAdapter<SearchMessage, MessageViewHolder> mFirebaseAdapter;
 
@@ -91,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         mUsername = ANONYMOUS;
 
@@ -124,7 +124,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         // New child entries
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
-        createNewSession("my new session");
         setupAdaptor("my session");
 
         mTrackText = (EditText) findViewById(R.id.trackText);
@@ -172,8 +171,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 mArtistText.setText("");
             }
         });
-
-        loadActiveSessions();
     }
 
     private void setupAdaptor(String sessionId) {
@@ -182,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 SearchMessage.class,
                 R.layout.item_message,
                 MessageViewHolder.class,
-                mFirebaseDatabaseReference.child("sessions").child(sessionId).child("songRequests")) {
+                mFirebaseDatabaseReference.child("sessions").child(sessionId).child("tracks")) {
 
             @Override
             protected void populateViewHolder(MessageViewHolder viewHolder,
@@ -225,13 +222,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         mMessageRecyclerView.setAdapter(mFirebaseAdapter);
     }
 
-    public void createNewSession(String sessionName) {
-        activeUserSession = sessionName;
-        ActiveSession newSession = new ActiveSession(sessionName);
-
-        mFirebaseDatabaseReference.child("activeSessions").setValue(newSession);
-    }
-
     @Override
     public void onStart() {
         super.onStart();
@@ -258,21 +248,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
             new SpotifyHttpUtil(getApplicationContext()).createSpotifyPlaylist();
         }
-    }
-
-    public void loadActiveSessions() {
-        mFirebaseDatabaseReference.child("activeSessions").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                Map<String, String> td = (HashMap<String,String>) snapshot.getValue();
-                activeSessions = td.values();
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.AJKH.SpotiQueue;
 
+import android.app.DialogFragment;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -10,7 +11,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.AJKH.SpotiQueue.Firebase.DatabaseUtils;
 import com.AJKH.SpotiQueue.Firebase.SignInActivity;
+import com.AJKH.SpotiQueue.Spotify.ExistingSessionsFragment;
 import com.AJKH.SpotiQueue.Spotify.SpotifyHttpUtil;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -29,7 +32,7 @@ public class SessionSelectActivity extends AppCompatActivity implements GoogleAp
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.session_select);
-
+        DatabaseUtils.getInstance();
         // Initialize Firebase Auth
         FirebaseAuth mFirebaseAuth = FirebaseAuth.getInstance();
         FirebaseUser mFirebaseUser = mFirebaseAuth.getCurrentUser();
@@ -38,14 +41,6 @@ public class SessionSelectActivity extends AppCompatActivity implements GoogleAp
             startActivity(new Intent(this, SignInActivity.class));
             finish();
         }
-
-        joinSessionButton = (Button) findViewById(R.id.joinSessionButton);
-        joinSessionButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                startActivity(new Intent(SessionSelectActivity.this, MainActivity.class));
-            }
-        });
 
         createSessionButton = (Button) findViewById(R.id.createSessionButton);
         createSessionButton.setOnClickListener(new View.OnClickListener() {
@@ -60,5 +55,9 @@ public class SessionSelectActivity extends AppCompatActivity implements GoogleAp
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
         Log.d("SessionSelectActivity", "onConnectionFailed:" + connectionResult);
         Toast.makeText(this, "Google Play Services error.", Toast.LENGTH_SHORT).show();
+    }
+
+    public void viewActiveSessions(View view) {
+        new ExistingSessionsFragment().show(getSupportFragmentManager(), "activeSessions");
     }
 }

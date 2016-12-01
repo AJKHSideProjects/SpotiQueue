@@ -34,5 +34,6 @@
         android:text="@string/session_join"
         android:layout_below="@id/createSessionButton"
         android:id="@+id/joinSessionButton"
+        android:onClick="viewActiveSessions"
         />
 </RelativeLayout>

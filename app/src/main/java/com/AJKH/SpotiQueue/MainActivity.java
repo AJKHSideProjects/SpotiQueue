@@ -24,6 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.AJKH.SpotiQueue.Firebase.SignInActivity;
+import com.AJKH.SpotiQueue.Fragments.CreateNewSessionFragment;
 import com.AJKH.SpotiQueue.Model.ActiveSession;
 import com.AJKH.SpotiQueue.Model.Track;
 import com.AJKH.SpotiQueue.Spotify.SpotifyHttpUtil;
@@ -108,6 +109,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 mPhotoUrl = mFirebaseUser.getPhotoUrl().toString();
             }
         }
+
+        new CreateNewSessionFragment().show(getSupportFragmentManager(), "createNewSession");
 
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .enableAutoManage(this /* FragmentActivity */, this /* OnConnectionFailedListener */)

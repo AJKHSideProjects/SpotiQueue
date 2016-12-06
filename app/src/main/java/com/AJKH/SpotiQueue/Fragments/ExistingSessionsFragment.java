@@ -1,21 +1,13 @@
-package com.AJKH.SpotiQueue.Spotify;
+package com.AJKH.SpotiQueue.Fragments;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
-import android.support.v4.app.Fragment;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
 
 import com.AJKH.SpotiQueue.Firebase.DatabaseUtils;
-import com.AJKH.SpotiQueue.R;
 
-/**
- * Created by jsturm on 11/3/2016.
- */
 
 public class ExistingSessionsFragment extends DialogFragment {
     @Override

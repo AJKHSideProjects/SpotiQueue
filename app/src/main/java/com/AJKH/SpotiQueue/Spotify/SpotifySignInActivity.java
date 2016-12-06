@@ -91,6 +91,7 @@ public class SpotifySignInActivity extends Activity {
                                     Intent spotifySuccessLogin = new Intent(getApplicationContext(), MainActivity.class);
                                     spotifySuccessLogin.putExtra("SPOTIFY_AUTH_TOKEN", SPOTIFY_AUTH_TOKEN);
                                     spotifySuccessLogin.putExtra("SPOTIFY_USERNAME", reader.nextString());
+                                    spotifySuccessLogin.putExtra("SESSION_ROLE", "OWNER");
 
                                     startActivity(spotifySuccessLogin);
                                 } else {

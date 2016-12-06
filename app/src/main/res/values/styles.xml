@@ -13,7 +13,7 @@
     </style>
 
     <style name="FriendlyButtonStyle" parent="Widget.AppCompat.Button">
-        <item name="android:textColor">@color/colorTitle</item>
+        <item name="android:textColor">@color/colorAccent</item>
 
     </style>
 </resources>

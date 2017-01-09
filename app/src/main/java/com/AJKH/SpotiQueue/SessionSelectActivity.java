@@ -17,10 +17,6 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 
-/**
- * Created by jsturm on 10/31/2016.
- */
-
 public class SessionSelectActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener{
 
     protected void onCreate(Bundle savedInstanceState) {

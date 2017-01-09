@@ -25,8 +25,6 @@ import android.widget.Toast;
 
 import com.AJKH.SpotiQueue.Firebase.SignInActivity;
 import com.AJKH.SpotiQueue.Fragments.CreateNewSessionFragment;
-import com.AJKH.SpotiQueue.Model.ActiveSession;
-import com.AJKH.SpotiQueue.Model.Track;
 import com.AJKH.SpotiQueue.Spotify.SpotifyHttpUtil;
 import com.AJKH.SpotiQueue.Spotify.SpotifySignInActivity;
 import com.bumptech.glide.Glide;
@@ -36,17 +34,11 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -91,9 +83,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Bundle extras = getIntent().getExtras();
+        mSharedPreferences = getSharedPreferences(Constants.PROPERTIES, MODE_PRIVATE);
         mUsername = ANONYMOUS;
+
+        if(extras != null) {
+            SharedPreferences.Editor editor = getSharedPreferences(Constants.PROPERTIES, MODE_PRIVATE).edit();
+            if(extras.getString(Constants.SESSION_ID) != null) {
+                editor.putString(Constants.SESSION_ID, extras.getString(Constants.SESSION_ID));
+            }
+            editor.putString(Constants.ROLE, extras.getString(Constants.ROLE));
+            editor.commit();
+        }
 
         // Initialize Firebase Auth
         mFirebaseAuth = FirebaseAuth.getInstance();
@@ -127,16 +128,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         // New child entries
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
-        setupAdaptor("my session");
+        setupAdaptor(mSharedPreferences.getString(Constants.SESSION_ID, null));
 
         mTrackText = (EditText) findViewById(R.id.trackText);
         mArtistText = (EditText) findViewById(R.id.artistText);
         mTrackText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(200)});
         mTrackText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
-
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.toString().trim().length() > 0) {
@@ -145,10 +144,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                     mSendButton.setEnabled(false);
                 }
             }
-
             @Override
-            public void afterTextChanged(Editable editable) {
-            }
+            public void afterTextChanged(Editable editable) {}
         });
 
         mSendButton = (Button) findViewById(R.id.sendButton);
@@ -164,10 +161,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
                 mFirebaseDatabaseReference.child(MESSAGES_CHILD).push().setValue(searchMessage);
 
-                if (mArtistText.getText().toString().equals("")) {
-                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
-                } else {
-                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString(), mArtistText.getText().toString());
+                if(Constants.OWNER.equals(mSharedPreferences.getString(Constants.ROLE, null))){
+                    if (mArtistText.getText().toString().equals("")) {
+                        new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
+                    } else {
+                        new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString(), mArtistText.getText().toString());
+                    }
                 }
 
                 mTrackText.setText("");
@@ -241,10 +240,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     public void onResume() {
         super.onResume();
         Bundle extras = getIntent().getExtras();
-        if (extras != null && mSharedPreferences.getString(Preferences.SPOTIFY_AUTH_TOKEN, null) == null) {
-            SharedPreferences.Editor editor = getSharedPreferences(Preferences.PROPERTIES, MODE_PRIVATE).edit();
-            editor.putString(Preferences.SPOTIFY_AUTH_TOKEN, extras.getString("SPOTIFY_AUTH_TOKEN"));
-            editor.putString(Preferences.SPOTIFY_USERNAME, extras.getString("SPOTIFY_USERNAME"));
+        if (extras != null && mSharedPreferences.getString(Constants.SPOTIFY_AUTH_TOKEN, null) == null) {
+            SharedPreferences.Editor editor = getSharedPreferences(Constants.PROPERTIES, MODE_PRIVATE).edit();
+            editor.putString(Constants.SPOTIFY_AUTH_TOKEN, extras.getString("SPOTIFY_AUTH_TOKEN"));
+            editor.putString(Constants.SPOTIFY_USERNAME, extras.getString("SPOTIFY_USERNAME"));
             editor.commit();
             Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
             toast.show();

@@ -23,6 +23,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.AJKH.SpotiQueue.Firebase.DatabaseUtils;
 import com.AJKH.SpotiQueue.Firebase.SignInActivity;
 import com.AJKH.SpotiQueue.Fragments.CreateNewSessionFragment;
 import com.AJKH.SpotiQueue.Spotify.SpotifyHttpUtil;
@@ -111,8 +112,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
             }
         }
 
-        new CreateNewSessionFragment().show(getSupportFragmentManager(), "createNewSession");
-
         mGoogleApiClient = new GoogleApiClient.Builder(this)
                 .enableAutoManage(this /* FragmentActivity */, this /* OnConnectionFailedListener */)
                 .addApi(Auth.GOOGLE_SIGN_IN_API)
@@ -128,6 +127,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         // New child entries
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
+        if (mSharedPreferences.getString(Constants.ROLE,"").equals(Constants.OWNER)){
+            new SpotifyHttpUtil(getApplicationContext()).createSpotifyPlaylist();
+            DatabaseUtils.getInstance().createNewSession(mSharedPreferences.getString(Constants.SESSION_ID,""));
+        }
         setupAdaptor(mSharedPreferences.getString(Constants.SESSION_ID, null));
 
         mTrackText = (EditText) findViewById(R.id.trackText);
@@ -159,7 +162,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         mPhotoUrl);
 
 
-                mFirebaseDatabaseReference.child(MESSAGES_CHILD).push().setValue(searchMessage);
+                mFirebaseDatabaseReference.child("sessions").child(mSharedPreferences.getString(Constants.SESSION_ID,"")).child("tracks")
+                        .child(Long.toString(System.currentTimeMillis())).setValue(searchMessage);
 
                 if(Constants.OWNER.equals(mSharedPreferences.getString(Constants.ROLE, null))){
                     if (mArtistText.getText().toString().equals("")) {
@@ -229,32 +233,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         super.onStart();
         // Check if user is signed in.
         // TODO: Add code to check if user is signed in.
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        Bundle extras = getIntent().getExtras();
-        if (extras != null && mSharedPreferences.getString(Constants.SPOTIFY_AUTH_TOKEN, null) == null) {
-            SharedPreferences.Editor editor = getSharedPreferences(Constants.PROPERTIES, MODE_PRIVATE).edit();
-            editor.putString(Constants.SPOTIFY_AUTH_TOKEN, extras.getString("SPOTIFY_AUTH_TOKEN"));
-            editor.putString(Constants.SPOTIFY_USERNAME, extras.getString("SPOTIFY_USERNAME"));
-            editor.commit();
-            Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
-            toast.show();
-
-            new SpotifyHttpUtil(getApplicationContext()).createSpotifyPlaylist();
-        }
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
     }
 
     @Override

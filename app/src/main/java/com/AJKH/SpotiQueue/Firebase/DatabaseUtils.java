@@ -1,6 +1,5 @@
 package com.AJKH.SpotiQueue.Firebase;
 
-import com.AJKH.SpotiQueue.Model.ActiveSession;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -10,7 +9,6 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class DatabaseUtils {
@@ -29,9 +27,7 @@ public class DatabaseUtils {
     private DatabaseReference mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
 
     public void createNewSession(String sessionName) {
-        ActiveSession newSession = new ActiveSession(sessionName);
-
-        mFirebaseDatabaseReference.child("activeSessions").setValue(newSession);
+        mFirebaseDatabaseReference.child("activeSessions").child(sessionName).setValue(sessionName);
     }
 
     public void loadActiveSessions() {

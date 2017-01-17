@@ -6,6 +6,16 @@ public class Track {
     private String name;
     private String photoUrl;
 
+    public Track(String artist, String track, String name, String photoUrl) {
+        this.artist = artist;
+        this.track = track;
+        this.name = name;
+        this.photoUrl = photoUrl;
+    }
+
+    public Track() {
+    }
+
     public String getPhotoUrl() {
         return photoUrl;
     }

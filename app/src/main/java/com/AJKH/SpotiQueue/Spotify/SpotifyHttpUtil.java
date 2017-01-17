@@ -136,7 +136,8 @@ public class SpotifyHttpUtil {
 
         final JSONObject jsonBody;
         try {
-            jsonBody = new JSONObject("{\"name\":\"SpotiQueuePlaylist\", \"public\":false}");
+            String playlistName = appContext.getSharedPreferences(Constants.PROPERTIES, appContext.MODE_PRIVATE).getString(Constants.SESSION_ID,"");
+            jsonBody = new JSONObject("{\"name\":\""+playlistName+"\", \"public\":false}");
             RequestQueue queue = Volley.newRequestQueue(appContext);
             JsonObjectRequest postRequest = new JsonObjectRequest(url, jsonBody,
                     new Response.Listener<JSONObject>() {

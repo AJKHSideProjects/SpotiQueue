@@ -2,12 +2,10 @@ package com.AJKH.SpotiQueue.Spotify;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
-import android.util.JsonReader;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.AJKH.SpotiQueue.Preferences;
+import com.AJKH.SpotiQueue.Constants;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -21,10 +19,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -142,7 +136,8 @@ public class SpotifyHttpUtil {
 
         final JSONObject jsonBody;
         try {
-            jsonBody = new JSONObject("{\"name\":\"SpotiQueuePlaylist\", \"public\":false}");
+            String playlistName = appContext.getSharedPreferences(Constants.PROPERTIES, appContext.MODE_PRIVATE).getString(Constants.SESSION_ID,"");
+            jsonBody = new JSONObject("{\"name\":\""+playlistName+"\", \"public\":false}");
             RequestQueue queue = Volley.newRequestQueue(appContext);
             JsonObjectRequest postRequest = new JsonObjectRequest(url, jsonBody,
                     new Response.Listener<JSONObject>() {
@@ -150,8 +145,8 @@ public class SpotifyHttpUtil {
                         public void onResponse(JSONObject response) {
                             System.out.print(response);
                             try {
-                                SharedPreferences.Editor editor = appContext.getSharedPreferences(Preferences.PROPERTIES, appContext.MODE_PRIVATE).edit();
-                                editor.putString(Preferences.SPOTIFY_PLAYLIST_ID, response.getString("id"));
+                                SharedPreferences.Editor editor = appContext.getSharedPreferences(Constants.PROPERTIES, appContext.MODE_PRIVATE).edit();
+                                editor.putString(Constants.SPOTIFY_PLAYLIST_ID, response.getString("id"));
                                 editor.commit();
                             } catch (JSONException e) {
                                 e.printStackTrace();
@@ -181,17 +176,17 @@ public class SpotifyHttpUtil {
     }
 
     public String getAuthToken() {
-        SharedPreferences prefs = appContext.getSharedPreferences(Preferences.PROPERTIES, appContext.MODE_PRIVATE);
-        return prefs.getString(Preferences.SPOTIFY_AUTH_TOKEN, null);
+        SharedPreferences prefs = appContext.getSharedPreferences(Constants.PROPERTIES, appContext.MODE_PRIVATE);
+        return prefs.getString(Constants.SPOTIFY_AUTH_TOKEN, null);
     }
 
     public String getUsername() {
-        SharedPreferences prefs = appContext.getSharedPreferences(Preferences.PROPERTIES, appContext.MODE_PRIVATE);
-        return prefs.getString(Preferences.SPOTIFY_USERNAME, null);
+        SharedPreferences prefs = appContext.getSharedPreferences(Constants.PROPERTIES, appContext.MODE_PRIVATE);
+        return prefs.getString(Constants.SPOTIFY_USERNAME, null);
     }
 
     public String getPlaylistId() {
-        SharedPreferences prefs = appContext.getSharedPreferences(Preferences.PROPERTIES, appContext.MODE_PRIVATE);
-        return prefs.getString(Preferences.SPOTIFY_PLAYLIST_ID, null);
+        SharedPreferences prefs = appContext.getSharedPreferences(Constants.PROPERTIES, appContext.MODE_PRIVATE);
+        return prefs.getString(Constants.SPOTIFY_PLAYLIST_ID, null);
     }
 }

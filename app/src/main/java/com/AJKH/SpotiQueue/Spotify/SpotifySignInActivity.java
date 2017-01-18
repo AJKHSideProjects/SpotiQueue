@@ -2,13 +2,17 @@ package com.AJKH.SpotiQueue.Spotify;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.JsonReader;
 import android.util.JsonToken;
 import android.util.Log;
+import android.widget.Toast;
 
+import com.AJKH.SpotiQueue.Constants;
 import com.AJKH.SpotiQueue.MainActivity;
 import com.AJKH.SpotiQueue.R;
+import com.AJKH.SpotiQueue.SessionSelectActivity;
 import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -88,9 +92,14 @@ public class SpotifySignInActivity extends Activity {
                                 }
 
                                 if (name.equals("id")) {
-                                    Intent spotifySuccessLogin = new Intent(getApplicationContext(), MainActivity.class);
-                                    spotifySuccessLogin.putExtra("SPOTIFY_AUTH_TOKEN", SPOTIFY_AUTH_TOKEN);
-                                    spotifySuccessLogin.putExtra("SPOTIFY_USERNAME", reader.nextString());
+                                    Intent spotifySuccessLogin = new Intent(getApplicationContext(), SessionSelectActivity.class);
+
+                                    SharedPreferences.Editor editor = getSharedPreferences(Constants.PROPERTIES, MODE_PRIVATE).edit();
+                                    editor.putString(Constants.SPOTIFY_AUTH_TOKEN, SPOTIFY_AUTH_TOKEN);
+                                    editor.putString(Constants.SPOTIFY_USERNAME, reader.nextString());
+                                    editor.apply();
+                                    Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
+                                    toast.show();
 
                                     startActivity(spotifySuccessLogin);
                                 } else {

@@ -23,9 +23,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.AJKH.SpotiQueue.Firebase.DatabaseUtils;
 import com.AJKH.SpotiQueue.Firebase.SignInActivity;
-import com.AJKH.SpotiQueue.Model.ActiveSession;
-import com.AJKH.SpotiQueue.Model.Track;
+import com.AJKH.SpotiQueue.Fragments.CreateNewSessionFragment;
 import com.AJKH.SpotiQueue.Spotify.SpotifyHttpUtil;
 import com.AJKH.SpotiQueue.Spotify.SpotifySignInActivity;
 import com.bumptech.glide.Glide;
@@ -35,17 +35,11 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -83,7 +77,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     // Firebase instance variables
     private FirebaseAuth mFirebaseAuth;
     private FirebaseUser mFirebaseUser;
-
     private DatabaseReference mFirebaseDatabaseReference;
     private FirebaseRecyclerAdapter<SearchMessage, MessageViewHolder> mFirebaseAdapter;
 
@@ -91,8 +84,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        Bundle extras = getIntent().getExtras();
+        mSharedPreferences = getSharedPreferences(Constants.PROPERTIES, MODE_PRIVATE);
         mUsername = ANONYMOUS;
+
+        if(extras != null) {
+            SharedPreferences.Editor editor = getSharedPreferences(Constants.PROPERTIES, MODE_PRIVATE).edit();
+            if(extras.getString(Constants.SESSION_ID) != null) {
+                editor.putString(Constants.SESSION_ID, extras.getString(Constants.SESSION_ID));
+            }
+            editor.putString(Constants.ROLE, extras.getString(Constants.ROLE));
+            editor.commit();
+        }
 
         // Initialize Firebase Auth
         mFirebaseAuth = FirebaseAuth.getInstance();
@@ -124,17 +127,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
 
         // New child entries
         mFirebaseDatabaseReference = FirebaseDatabase.getInstance().getReference();
-        createNewSession("my new session");
-        setupAdaptor("my session");
+        if (mSharedPreferences.getString(Constants.ROLE,"").equals(Constants.OWNER)){
+            new SpotifyHttpUtil(getApplicationContext()).createSpotifyPlaylist();
+            DatabaseUtils.getInstance().createNewSession(mSharedPreferences.getString(Constants.SESSION_ID,""));
+        }
+        setupAdaptor(mSharedPreferences.getString(Constants.SESSION_ID, null));
 
         mTrackText = (EditText) findViewById(R.id.trackText);
         mArtistText = (EditText) findViewById(R.id.artistText);
         mTrackText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(200)});
         mTrackText.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-            }
-
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
                 if (charSequence.toString().trim().length() > 0) {
@@ -143,10 +147,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                     mSendButton.setEnabled(false);
                 }
             }
-
             @Override
-            public void afterTextChanged(Editable editable) {
-            }
+            public void afterTextChanged(Editable editable) {}
         });
 
         mSendButton = (Button) findViewById(R.id.sendButton);
@@ -160,20 +162,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                         mPhotoUrl);
 
 
-                mFirebaseDatabaseReference.child(MESSAGES_CHILD).push().setValue(searchMessage);
+                mFirebaseDatabaseReference.child("sessions").child(mSharedPreferences.getString(Constants.SESSION_ID,"")).child("tracks")
+                        .child(Long.toString(System.currentTimeMillis())).setValue(searchMessage);
 
-                if (mArtistText.getText().toString().equals("")) {
-                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
-                } else {
-                    new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString(), mArtistText.getText().toString());
+                if(Constants.OWNER.equals(mSharedPreferences.getString(Constants.ROLE, null))){
+                    if (mArtistText.getText().toString().equals("")) {
+                        new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString());
+                    } else {
+                        new SpotifyHttpUtil(getApplicationContext()).searchSpotifyTrack(mTrackText.getText().toString(), mArtistText.getText().toString());
+                    }
                 }
 
                 mTrackText.setText("");
                 mArtistText.setText("");
             }
         });
-
-        loadActiveSessions();
     }
 
     private void setupAdaptor(String sessionId) {
@@ -182,7 +185,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
                 SearchMessage.class,
                 R.layout.item_message,
                 MessageViewHolder.class,
-                mFirebaseDatabaseReference.child("sessions").child(sessionId).child("songRequests")) {
+                mFirebaseDatabaseReference.child("sessions").child(sessionId).child("tracks")) {
 
             @Override
             protected void populateViewHolder(MessageViewHolder viewHolder,
@@ -225,59 +228,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.O
         mMessageRecyclerView.setAdapter(mFirebaseAdapter);
     }
 
-    public void createNewSession(String sessionName) {
-        activeUserSession = sessionName;
-        ActiveSession newSession = new ActiveSession(sessionName);
-
-        mFirebaseDatabaseReference.child("activeSessions").setValue(newSession);
-    }
-
     @Override
     public void onStart() {
         super.onStart();
         // Check if user is signed in.
         // TODO: Add code to check if user is signed in.
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        Bundle extras = getIntent().getExtras();
-        if (extras != null && mSharedPreferences.getString(Preferences.SPOTIFY_AUTH_TOKEN, null) == null) {
-            SharedPreferences.Editor editor = getSharedPreferences(Preferences.PROPERTIES, MODE_PRIVATE).edit();
-            editor.putString(Preferences.SPOTIFY_AUTH_TOKEN, extras.getString("SPOTIFY_AUTH_TOKEN"));
-            editor.putString(Preferences.SPOTIFY_USERNAME, extras.getString("SPOTIFY_USERNAME"));
-            editor.commit();
-            Toast toast = Toast.makeText(getApplicationContext(), "Spotify sign in successful", Toast.LENGTH_LONG);
-            toast.show();
-
-            new SpotifyHttpUtil(getApplicationContext()).createSpotifyPlaylist();
-        }
-    }
-
-    public void loadActiveSessions() {
-        mFirebaseDatabaseReference.child("activeSessions").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                Map<String, String> td = (HashMap<String,String>) snapshot.getValue();
-                activeSessions = td.values();
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
     }
 
     @Override

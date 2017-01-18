@@ -25,6 +25,7 @@
         android:text="@string/session_create"
         android:layout_below="@id/logoImage"
         android:id="@+id/createSessionButton"
+        android:onClick="createNewSession"
         />
 
     <Button
@@ -34,5 +35,6 @@
         android:text="@string/session_join"
         android:layout_below="@id/createSessionButton"
         android:id="@+id/joinSessionButton"
+        android:onClick="viewActiveSessions"
         />
 </RelativeLayout>

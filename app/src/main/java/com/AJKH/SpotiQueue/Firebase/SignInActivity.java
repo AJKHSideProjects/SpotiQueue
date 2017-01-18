@@ -10,6 +10,7 @@ import android.widget.Toast;
 
 import com.AJKH.SpotiQueue.MainActivity;
 import com.AJKH.SpotiQueue.R;
+import com.AJKH.SpotiQueue.SessionSelectActivity;
 import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
@@ -114,7 +115,7 @@ public class SignInActivity extends AppCompatActivity implements
                             Toast.makeText(SignInActivity.this, "Authentication failed.",
                                     Toast.LENGTH_SHORT).show();
                         } else {
-                            startActivity(new Intent(SignInActivity.this, MainActivity.class));
+                            startActivity(new Intent(SignInActivity.this, SessionSelectActivity.class));
                             finish();
                         }
                     }
